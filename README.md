@@ -1,2 +1,2 @@
-# BBU
+# TPA
 A simple telegram assistant 
