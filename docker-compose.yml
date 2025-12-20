@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  db:
+    image: timescale/timescaledb:2.16.1-pg15
+    env_file:
+      - .env
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - tpa_db_data:/var/lib/postgresql/data
+    command: ["postgres", "-c", "wal_level=logical"]
+     
+
+  backend:
+    image: '${DOCKER_IMAGE_BACKEND:-tpa_backend}:latest'
+    build:
+      context: .
+      dockerfile: backend.dockerfile
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app
+      - ./migrations:/migrations
+    ports:
+      - "${BACKEND_SYSTEM_PORT}:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg2://user:password@db:5432/b_better_u
+    depends_on:
+      - db
+  
+volumes:
+  tpa_db_data:
