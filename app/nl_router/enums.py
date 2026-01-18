@@ -1,5 +1,5 @@
 from enum import Enum
 
 class ModelType(Enum):
-    LOCAL = "local"
+    OPEN_AI = "open_ai"
     GEN_AI = "gen_ai"

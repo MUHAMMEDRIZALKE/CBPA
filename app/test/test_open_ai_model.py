@@ -6,10 +6,16 @@ from app.core.config import settings
 
 async def test_local_model():
     # Force use of local model for test
-    settings.MODEL_TYPE = "local"
+    settings.MODEL_TYPE = "open_ai"
     # settings.MODEL_TYPE = "gen_ai" # Uncomment to test gen_ai
     
-    print(f"Testing local model: {settings.LOCAL_MODEL_NAME} at {settings.LOCAL_MODEL_URL}")
+    # Check if OPEN_AI_MODEL_URL is set, if not fallback to LOCAL_MODEL_URL logic or just set it for test
+    if not settings.OPEN_AI_MODEL_URL:
+        # Assuming we want to test with the local qwen model logic
+        settings.OPEN_AI_MODEL_URL = "http://host.docker.internal:12434/engines/v1"
+        settings.OPEN_AI_MODEL_NAME = "ai/qwen2.5:7B-Q4_0"
+
+    print(f"Testing OpenAI compatible model: {settings.OPEN_AI_MODEL_NAME} at {settings.OPEN_AI_MODEL_URL}")
     
     router = NLURouter()
 

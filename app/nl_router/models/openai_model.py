@@ -10,17 +10,17 @@ from app.nl_router.models.base import BaseModel
 
 logger = logging.getLogger(__name__)
 
-class LocalModel(BaseModel):
+class OpenAIModel(BaseModel):
     def __init__(self):
         self.client = AsyncOpenAI(
-            base_url=settings.LOCAL_MODEL_URL,
-            api_key="dummy-key-not-needed",
+            base_url=settings.OPEN_AI_MODEL_URL,
+            api_key=settings.OPEN_AI_API_KEY,
         )
-        self.model_name = settings.LOCAL_MODEL_NAME
+        self.model_name = settings.OPEN_AI_MODEL_NAME
 
     async def parse_user_message(self, message: str) -> Any:
         """
-        Queries the locally running OpenAI-compatible model.
+        Queries the OpenAI-compatible model.
         Handles tool calls if the model requests them.
         """
         messages = [
@@ -57,5 +57,5 @@ class LocalModel(BaseModel):
             return response_message.content
 
         except Exception as e:
-            logger.error(f"Error querying local model: {e}")
+            logger.error(f"Error querying OpenAI model: {e}")
             return f"Error: {str(e)}"

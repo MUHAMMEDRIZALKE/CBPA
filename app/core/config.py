@@ -28,10 +28,11 @@ class Settings(BaseSettings):
     DB_MAX_OVERFLOW: int = 10
     DB_POOL_TIMEOUT: int = 30
 
-    MODEL_TYPE: str = ""  # "local" or "gen_ai"
+    MODEL_TYPE: str = ""  # "open_ai" or "gen_ai"
 
-    LOCAL_MODEL_URL: str = ""
-    LOCAL_MODEL_NAME: str = ""
+    OPEN_AI_MODEL_URL: str = ""
+    OPEN_AI_MODEL_NAME: str = ""
+    OPEN_AI_API_KEY: str = ""
 
     GEN_AI_API_KEY: str = ""
     GEN_AI_MODEL_NAME: str = ""
