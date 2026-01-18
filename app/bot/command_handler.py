@@ -1,11 +1,14 @@
 
-
+from app.nl_router.nlu import NLURouter
 
 class Handler:
 
-    @staticmethod
+    def __init__(self):
+        self.router = NLURouter()
+
     async def echo(update, context):
-        await update.message.reply_text(update.message.text)
+        response = await Handler().router.parse_user_message(update.message.text)
+        await update.message.reply_text(response)
 
     @staticmethod
     async def start(update, context):
