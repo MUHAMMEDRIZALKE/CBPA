@@ -1,8 +1,8 @@
-"""Added users and telegram_users tables
+"""Added User and TelegramUser models
 
-Revision ID: 2e0402d28bfb
+Revision ID: df72601d16f6
 Revises: 
-Create Date: 2026-01-19 15:47:04.661046
+Create Date: 2026-01-21 16:50:02.330541
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '2e0402d28bfb'
+revision: str = 'df72601d16f6'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -36,13 +36,17 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_users_username'), 'users', ['username'], unique=False)
     op.create_table('telegram_users',
+    sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('telegram_id', sa.String(length=50), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('username', sa.String(length=50), nullable=True),
     sa.Column('first_name', sa.String(length=50), nullable=True),
     sa.Column('last_name', sa.String(length=50), nullable=True),
     sa.Column('is_deleted', sa.Boolean(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('telegram_id')
     )
     # ### end Alembic commands ###
