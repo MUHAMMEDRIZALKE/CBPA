@@ -20,9 +20,10 @@ class User(Base, TimestampMixin):
     telegram_users = relationship("TelegramUser", back_populates="user")
 
 
-class TelegramUser(User, TimestampMixin):
+class TelegramUser(Base, TimestampMixin):
     __tablename__ = 'telegram_users'
 
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     telegram_id = Column(String(50), unique=True, nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
     username = Column(String(50), nullable=True)
