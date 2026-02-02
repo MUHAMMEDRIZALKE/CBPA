@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import UUID, Column, String, Boolean, ForeignKey
+from sqlalchemy import UUID, Column, String, Boolean, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base, TimestampMixin
@@ -16,6 +16,10 @@ class User(Base, TimestampMixin):
     role = Column(String(50), default='user')
     is_active = Column(Boolean, default=True)
     is_deleted = Column(Boolean, default=False)
+    currency_id = Column(Integer, ForeignKey('currency.id'), nullable=True)
+
+    currency = relationship("Currency")
+    transactions = relationship("Transaction", back_populates="user", cascade="all, delete-orphan")
 
     telegram_users = relationship("TelegramUser", back_populates="user")
 
