@@ -18,7 +18,7 @@ class OpenAIModel(BaseModel):
         )
         self.model_name = settings.OPEN_AI_MODEL_NAME
 
-    async def parse_user_message(self, message: str) -> Any:
+    async def parse_user_message(self, message: str, user_id: str) -> Any:
         """
         Queries the OpenAI-compatible model.
         Handles tool calls if the model requests them.
@@ -51,7 +51,7 @@ class OpenAIModel(BaseModel):
                     "function": function_name,
                     "arguments": function_args
                 }
-                return FunctionRouter.call_function(parsed_call)
+                return FunctionRouter.call_function(parsed_call, user_id)
 
             # If no tool call, return the content
             return response_message.content

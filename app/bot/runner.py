@@ -14,6 +14,7 @@ def run_bot():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, Handler.echo))
     app.add_handler(CommandHandler("start", Handler.start))
     app.add_handler(CommandHandler("help", Handler.help_command))
+    app.add_handler(CommandHandler("set_currency", Handler.set_currency))
     
     logger.info("Starting bot polling...")
     app.run_polling()

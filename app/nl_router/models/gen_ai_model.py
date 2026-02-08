@@ -12,26 +12,5 @@ class GenAIModel(BaseModel):
         self.client = genai.Client(api_key=settings.GEN_AI_API_KEY)
         self.model_name = settings.GEN_AI_MODEL_NAME
 
-    async def parse_user_message(self, message: str) -> Any:
-        ...
-        # response_stream = self.client.models.generate_content_stream(
-        #     model=self.model_name,
-        #     contents=message,
-        #     config=types.GenerateContentConfig(
-        #         tools=[get_weather_tool],
-        #         tool_config=types.ToolConfig(
-        #             function_calling_config=types.FunctionCallingConfig(
-        #                 mode=types.FunctionCallingConfigMode.AUTO,
-        #             )
-        #         ),
-        #     ),
-        # )
-
-        # for chunk in response_stream:
-        #     if chunk.function_calls:
-        #         function_call = chunk.function_calls[0]
-        #         if function_call and function_call.name:
-        #             return FunctionRouter.call_function({
-        #                 "function": function_call.name,
-        #                 "arguments": function_call.args
-        #             })
+    async def parse_user_message(self, message: str, user_id: str) -> Any:
+        return "GenAI Model not implemented yet."

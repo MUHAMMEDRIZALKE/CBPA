@@ -14,6 +14,7 @@ class Transaction(Base, TimestampMixin):
     amount = Column(Float, nullable=False)
     description = Column(String(255), nullable=False)
     category = Column(String(50), nullable=True)
+    type = Column(String(50), nullable=False)
     occurred_at = Column(DateTime, nullable=False)
 
     user = relationship("User", back_populates="transactions")

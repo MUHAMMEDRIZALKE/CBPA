@@ -22,5 +22,5 @@ class NLURouter:
                  return OpenAIModel()
             raise ValueError(f"Unknown MODEL_TYPE: {model_type}")
 
-    async def parse_user_message(self, message: str) -> Any:
-        return await self.model.parse_user_message(message)
+    async def parse_user_message(self, message: str, user_id: str) -> Any:
+        return await self.model.parse_user_message(message, user_id)
