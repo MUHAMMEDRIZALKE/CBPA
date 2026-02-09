@@ -102,3 +102,52 @@ def test_get_analytics(db):
     assert "Income: 100.0" in analytics
     assert "Expense: 40.0" in analytics
     assert "Balance: 60.0" in analytics
+
+def test_analytics_custom_range(db):
+    # Setup user with transactions
+    unique_id = str(uuid4())[:8]
+    user = User(username=f"user_range_{unique_id}")
+    db.add(user)
+    
+    existing_currency = db.query(Currency).filter(Currency.code == "USD").first()
+    if not existing_currency:
+        currency = Currency(name="US Dollar", code="USD", symbol="$", numeric_code=840, minor_unit=2)
+        db.add(currency)
+        currency_id = currency.id
+    else:
+        currency_id = existing_currency.id
+        
+    user.currency_id = currency_id
+    db.commit()
+    db.refresh(user)
+    
+    controller = TransactionController(user.id)
+    
+    # Add transactions with specific dates
+    # We need to manually set the date because add_transaction defaults to now() if not provided,
+    # and date parsing in add_transaction is simple.
+    # Let's use the controller's date parsing if possible, or just mock it.
+    # actually add_transaction takes a 'date' string!
+    
+    # Date format: YYYY-MM-DD
+    controller.add_transaction(100.0, "Income Last Year", TransactionType.INCOME, "USD", date="2022-01-15")
+    controller.add_transaction(50.0, "Expense Last Year", TransactionType.EXPENSE, "USD", date="2022-01-20")
+    
+    controller.add_transaction(200.0, "Income This Year", TransactionType.INCOME, "USD", date="2023-01-15")
+
+    # Test range that only includes 2022
+    analytics_2022 = controller.get_analytics(
+        start_date="2022-01-01",
+        end_date="2022-12-31"
+    )
+    
+    assert "Income: 100.0" in analytics_2022
+    assert "Expense: 50.0" in analytics_2022
+    
+    # Test range that includes 2023 (assuming we are testing logic not just current year)
+    analytics_2023 = controller.get_analytics(
+         start_date="2023-01-01",
+         end_date="2023-12-31"
+    )
+    assert "Income: 200.0" in analytics_2023
+    assert "Expense: 0.0" in analytics_2023

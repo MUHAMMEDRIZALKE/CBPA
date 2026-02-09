@@ -31,6 +31,10 @@ class FunctionRouter:
             )
             
         if fn == "get_analytics":
-            return controller.get_analytics(time_range=args.get("time_range"))
+            return controller.get_analytics(
+                time_range=args.get("time_range", "current_month"),
+                start_date=args.get("start_date"),
+                end_date=args.get("end_date")
+            )
 
         return "❌ Unknown function"
