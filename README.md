@@ -7,6 +7,7 @@ CBPA (Chat Based Privet Assistant) is an intelligent, chat-first personal assist
 ## 🚀 Features (Current)
 
 - **Natural Language Expense Logging**: Simply type "Spent $15 on lunch" and the assistant automatically categorizes and logs the transaction.
+- **General Q&A**: Ask normal questions and get intelligent answers powered by LLMs - CBPA can help with general knowledge, explanations, and conversations beyond just expense tracking.
 - **Multi-Currency Support**: Handle expenses in various currencies with ease. Set your default currency and log transactions in any other currency.
 - **Interactive Chat Interface**: A user-friendly chat experience (currently via Telegram) powered by `python-telegram-bot`.
 - **Robust Data Management**: Built on PostgreSQL with TimescaleDB for efficient handling of time-series data.
@@ -108,7 +109,12 @@ Before you begin, ensure you have the following requirements:
     ```text
     I spent 50 EUR on groceries today.
     ```
-5.  **View Help**:
+5.  **Ask general questions**:
+    ```text
+    How do large language models work?
+    What's the difference between AI and machine learning?
+    ```
+6.  **View Help**:
     ```text
     /help
     ```
