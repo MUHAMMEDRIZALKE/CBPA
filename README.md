@@ -1,6 +1,6 @@
 # CBPA - Chat Based Privet Assistant
 
-CBPA (Chat Based Privet Assistant) is an intelligent, chat-first personal assistant. It currently focuses on expense tracking and financial management through a Telegram bot, and is evolving into a fully fledged assistant with reminders, integrations, and multi-platform support (including a future app frontend). Powered by advanced Large Language Models (LLMs) like OpenAI and Google GenAI, CBPA understands natural language commands, making interacting with your assistant as simple as chatting with a friend.
+CBPA (Chat Based Privet Assistant) is an intelligent, chat-first personal assistant. It currently focuses on expense tracking and financial management through a Telegram bot, and is evolving into a fully fledged assistant with reminders, integrations, and multi-platform support (including a future app frontend). Powered by any Large Language Model (LLM) that supports OpenAPI-compatible API calls, CBPA understands natural language commands, making interacting with your assistant as simple as chatting with a friend.
 
 > **Note**: CBPA is a work in progress. Features and APIs are actively evolving.
 
@@ -28,7 +28,7 @@ CBPA is planned to grow beyond a Telegram-only, finance-focused bot into a gener
 - **Language**: Python 3.13+
 - **Bot Framework**: [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot)
 - **Database**: PostgreSQL (TimescaleDB), SQLAlchemy (ORM), Alembic (Migrations)
-- **AI/LLM**: OpenAI API / Google GenAI
+- **AI/LLM**: Any LLM with OpenAPI-compatible API support (e.g., OpenAI, Google GenAI, Anthropic Claude, etc.)
 - **Package Manager**: [uv](https://github.com/astral-sh/uv)
 - **Containerization**: Docker, Docker Compose
 
@@ -38,7 +38,7 @@ Before you begin, ensure you have the following requirements:
 
 - **Docker** and **Docker Compose** installed on your machine.
 - A **Telegram Bot Token** (obtained from [@BotFather](https://t.me/BotFather)).
-- An **OpenAI API Key** or **Google GenAI API Key**.
+- An **API Key** for an LLM provider that supports OpenAPI-compatible API calls (e.g., OpenAI, Google GenAI, Anthropic Claude, etc.).
 - (Optional) **Python 3.13+** and **uv** installed for local development.
 
 ## ⚙️ Installation & Setup
@@ -56,17 +56,27 @@ Before you begin, ensure you have the following requirements:
 
     ```ini
     # Database Configuration
+    POSTGRES_SERVER=db
     POSTGRES_USER=your_db_user
     POSTGRES_PASSWORD=your_db_password
     POSTGRES_DB=tpa_db
-    DATABASE_URL=postgresql+psycopg2://your_db_user:your_db_password@db:5432/tpa_db
 
     # Bot Configuration
-    TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+    BOT_TOKEN=your_telegram_bot_token
 
-    # AI Configuration (Choose one or both depending on setup)
-    OPENAI_API_KEY=your_openai_api_key
-    GOOGLE_API_KEY=your_google_api_key
+    # AI Configuration
+    # Choose your LLM provider: "open_ai" for OpenAPI-compatible endpoints, "gen_ai" for Google GenAI
+    MODEL_TYPE=open_ai
+
+    # OpenAPI-compatible LLM Configuration (for MODEL_TYPE=open_ai)
+    # Works with any LLM provider that supports OpenAPI-compatible API calls
+    OPEN_AI_MODEL_URL=https://api.openai.com/v1  # Or your OpenAPI-compatible endpoint URL
+    OPEN_AI_MODEL_NAME=gpt-4  # Or your model name
+    OPEN_AI_API_KEY=your_openai_api_key  # API key (can be dummy-key-not-needed for local models)
+
+    # Google GenAI Configuration (for MODEL_TYPE=gen_ai)
+    GEN_AI_API_KEY=your_google_api_key
+    GEN_AI_MODEL_NAME=gemini-3-pro-preview
 
     # System
     BACKEND_SYSTEM_PORT=8000
