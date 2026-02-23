@@ -8,15 +8,30 @@ STD_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "amount": {"type": "number", "description": "Amount spent"},
-                    "description": {"type": "string", "description": "Description of the expense"},
-                    "currency_code": {"type": "string", "description": "Currency code (e.g., USD, EUR). Optional if default set."},
-                    "category": {"type": "string", "description": "Category of expense (e.g., food, transport). Optional."},
-                    "date": {"type": "string", "description": "Date of transaction (YYYY-MM-DD). Optional."}
+                    "amount": {
+                        "type": "number",
+                        "description": "Amount spent",
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Description of the expense",
+                    },
+                    "currency_code": {
+                        "type": "string",
+                        "description": "Currency code (e.g., USD, EUR). Optional if default set.",
+                    },
+                    "category": {
+                        "type": "string",
+                        "description": "Category of expense (e.g., food, transport). Optional.",
+                    },
+                    "date": {
+                        "type": "string",
+                        "description": "Date of transaction (YYYY-MM-DD). Optional.",
+                    },
                 },
-                "required": ["amount", "description"]
-            }
-        }
+                "required": ["amount", "description"],
+            },
+        },
     },
     {
         "type": "function",
@@ -26,15 +41,30 @@ STD_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "amount": {"type": "number", "description": "Amount earned"},
-                    "description": {"type": "string", "description": "Source of income"},
-                    "currency_code": {"type": "string", "description": "Currency code. Optional."},
-                    "category": {"type": "string", "description": "Category (e.g., salary, gift). Optional."},
-                    "date": {"type": "string", "description": "Date of transaction. Optional."}
+                    "amount": {
+                        "type": "number",
+                        "description": "Amount earned",
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Source of income",
+                    },
+                    "currency_code": {
+                        "type": "string",
+                        "description": "Currency code. Optional.",
+                    },
+                    "category": {
+                        "type": "string",
+                        "description": "Category (e.g., salary, gift). Optional.",
+                    },
+                    "date": {
+                        "type": "string",
+                        "description": "Date of transaction. Optional.",
+                    },
                 },
-                "required": ["amount", "description"]
-            }
-        }
+                "required": ["amount", "description"],
+            },
+        },
     },
     {
         "type": "function",
@@ -44,12 +74,56 @@ STD_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "time_range": {"type": "string", "enum": ["current_month", "last_month", "today"], "description": "Preset time range. Default is current_month."},
-                    "start_date": {"type": "string", "description": "Start date for custom range (YYYY-MM-DD). Optional."},
-                    "end_date": {"type": "string", "description": "End date for custom range (YYYY-MM-DD). Optional."}
+                    "time_range": {
+                        "type": "string",
+                        "enum": ["current_month", "last_month", "today"],
+                        "description": "Preset time range. Default is current_month.",
+                    },
+                    "start_date": {
+                        "type": "string",
+                        "description": "Start date for custom range (YYYY-MM-DD). Optional.",
+                    },
+                    "end_date": {
+                        "type": "string",
+                        "description": "End date for custom range (YYYY-MM-DD). Optional.",
+                    },
                 },
-                "required": []
-            }
-        }
-    }
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_transactions",
+            "description": "List the user's most recent transactions in descending chronological order.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "description": "Number of most recent transactions to list (default 10, max 50).",
+                    }
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_transaction",
+            "description": "Delete a specific transaction by its ID.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "transaction_id": {
+                        "type": "string",
+                        "description": "UUID of the transaction to delete (as shown in the transaction list).",
+                    }
+                },
+                "required": ["transaction_id"],
+            },
+        },
+    },
 ]

@@ -1,5 +1,9 @@
 from typing import Any, Dict
-from app.bot.controller.expense.transaction_controller import TransactionController, TransactionType
+
+from app.bot.controller.expense.transaction_controller import (
+    TransactionController,
+    TransactionType,
+)
 
 
 class FunctionRouter:
@@ -7,7 +11,7 @@ class FunctionRouter:
     def call_function(parsed_call: Dict[str, Any], user_id: str) -> Any:
         fn = parsed_call.get("function")
         args = parsed_call.get("arguments", {})
-        
+
         controller = TransactionController(user_id=user_id)
 
         if fn == "add_expense":
@@ -17,9 +21,9 @@ class FunctionRouter:
                 transaction_type=TransactionType.EXPENSE,
                 currency_code=args.get("currency_code"),
                 category=args.get("category"),
-                date=args.get("date")
+                date=args.get("date"),
             )
-        
+
         if fn == "add_income":
             return controller.add_transaction(
                 amount=args.get("amount"),
@@ -27,14 +31,24 @@ class FunctionRouter:
                 transaction_type=TransactionType.INCOME,
                 currency_code=args.get("currency_code"),
                 category=args.get("category"),
-                date=args.get("date")
+                date=args.get("date"),
             )
-            
+
         if fn == "get_analytics":
             return controller.get_analytics(
                 time_range=args.get("time_range", "current_month"),
                 start_date=args.get("start_date"),
-                end_date=args.get("end_date")
+                end_date=args.get("end_date"),
+            )
+
+        if fn == "list_transactions":
+            return controller.list_transactions(
+                limit=args.get("limit"),
+            )
+
+        if fn == "delete_transaction":
+            return controller.delete_transaction(
+                transaction_id=args.get("transaction_id"),
             )
 
         return "❌ Unknown function"

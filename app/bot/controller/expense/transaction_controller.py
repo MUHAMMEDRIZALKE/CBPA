@@ -9,9 +9,11 @@ from app.models.expense_tracker import Transaction
 from app.models.user import User
 from app.models.currency import Currency
 
+
 class TransactionType(StrEnum):
     INCOME = "income"
     EXPENSE = "expense"
+
 
 class TransactionCategory(StrEnum):
     FOOD = "food"
@@ -19,6 +21,7 @@ class TransactionCategory(StrEnum):
     SHOPPING = "shopping"
     SALARY = "salary"
     OTHER = "other"
+
 
 class TransactionController:
     def __init__(self, user_id: UUID):
@@ -32,7 +35,7 @@ class TransactionController:
         transaction_type: TransactionType,
         currency_code: Optional[str] = None,
         category: Optional[str] = None,
-        date: Optional[str] = None
+        date: Optional[str] = None,
     ) -> str:
         # Resolve Currency
         user = self.db.query(User).filter(User.id == self.user_id).first()
@@ -40,13 +43,17 @@ class TransactionController:
             return "User not found."
 
         target_currency = None
-        
+
         # 1. Try to find currency from input
         if currency_code:
-            target_currency = self.db.query(Currency).filter(Currency.code == currency_code.upper()).first()
+            target_currency = (
+                self.db.query(Currency)
+                .filter(Currency.code == currency_code.upper())
+                .first()
+            )
             if not target_currency:
                 return f"Currency {currency_code} not supported."
-            
+
             # If user has no default, set this as default
             if not user.currency_id:
                 user.currency_id = target_currency.id
@@ -57,7 +64,7 @@ class TransactionController:
         # 2. If no input currency, use user default
         elif user.currency:
             target_currency = user.currency
-        
+
         # 3. If neither, fail and prompt user
         else:
             return "Please set your default currency first. Use /set_currency <CODE> or specify currency in your request (e.g., 'spent 100 USD')."
@@ -69,7 +76,8 @@ class TransactionController:
                 # Basic parsing, might need more robust handling
                 occurred_at = datetime.fromisoformat(date)
             except ValueError:
-                pass # Fallback to now
+                # Fallback to now
+                pass
 
         transaction = Transaction(
             user_id=self.user_id,
@@ -78,14 +86,86 @@ class TransactionController:
             description=description,
             category=category or TransactionCategory.OTHER,
             type=transaction_type,
-            occurred_at=occurred_at
+            occurred_at=occurred_at,
         )
         self.db.add(transaction)
         self.db.commit()
-        
+
         return f"Recorded {transaction_type}: {amount} {target_currency.code} for {description}."
 
-    def get_analytics(self, time_range: str = "current_month", start_date: Optional[str] = None, end_date: Optional[str] = None) -> str:
+    def list_transactions(self, limit: Optional[int] = None) -> str:
+        try:
+            limit_value = int(limit) if limit is not None else 10
+        except (TypeError, ValueError):
+            limit_value = 10
+
+        if limit_value <= 0:
+            limit_value = 10
+
+        # Hard cap to avoid overly long responses
+        if limit_value > 50:
+            limit_value = 50
+
+        transactions = (
+            self.db.query(Transaction)
+            .filter(Transaction.user_id == self.user_id)
+            .order_by(Transaction.occurred_at.desc())
+            .limit(limit_value)
+            .all()
+        )
+
+        if not transactions:
+            return "You don't have any recorded transactions yet."
+
+        lines = ["Here are your most recent transactions:"]
+        for idx, tx in enumerate(transactions, start=1):
+            currency_code = tx.currency.code if tx.currency else ""
+            date_str = tx.occurred_at.strftime("%Y-%m-%d")
+            category_str = tx.category or ""
+            lines.append(
+                f"{idx}. {date_str} | {tx.type} | {tx.amount} {currency_code} | {tx.description} | {category_str} | id: {tx.id}"
+            )
+
+        return "\n".join(lines)
+
+    def delete_transaction(self, transaction_id: str) -> str:
+        if not transaction_id:
+            return "Please provide a transaction ID to delete."
+
+        try:
+            tx_uuid = UUID(transaction_id)
+        except ValueError:
+            return "The transaction ID you provided is not a valid UUID."
+
+        transaction = (
+            self.db.query(Transaction)
+            .filter(
+                Transaction.id == tx_uuid,
+                Transaction.user_id == self.user_id,
+            )
+            .first()
+        )
+
+        if not transaction:
+            return "Transaction not found for your account."
+
+        currency_code = transaction.currency.code if transaction.currency else ""
+        date_str = transaction.occurred_at.strftime("%Y-%m-%d")
+        summary = (
+            f"{transaction.amount} {currency_code} on {date_str} - {transaction.description}"
+        )
+
+        self.db.delete(transaction)
+        self.db.commit()
+
+        return f"Deleted transaction {transaction.id}: {summary}."
+
+    def get_analytics(
+        self,
+        time_range: str = "current_month",
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> str:
         query_start = None
         query_end = None
 
@@ -103,44 +183,80 @@ class TransactionController:
                 query_start = parse_date(start_date)
             if end_date:
                 query_end = parse_date(end_date)
-            
+
             # If provided but invalid, we might want to handle it. For now, let's assume valid or ignore.
             display_range = f"{start_date or '...'} to {end_date or 'now'}"
-        
+
         else:
             # Preset ranges
             now = datetime.now()
             if time_range == "current_month":
-                query_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                query_start = now.replace(
+                    day=1,
+                    hour=0,
+                    minute=0,
+                    second=0,
+                    microsecond=0,
+                )
                 # query_end is explicitly None (up to now)
                 display_range = "Current Month"
             elif time_range == "today":
-                query_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                query_start = now.replace(
+                    hour=0,
+                    minute=0,
+                    second=0,
+                    microsecond=0,
+                )
                 display_range = "Today"
             elif time_range == "last_month":
                 # First day of this month
-                first_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-                # Last day of last month is first_this_month - 1 microsecond (effectively)
-                # But safer:
+                first_this_month = now.replace(
+                    day=1,
+                    hour=0,
+                    minute=0,
+                    second=0,
+                    microsecond=0,
+                )
                 # Find first day of last month
                 # If current month is Jan, last month is Dec of prev year
                 if now.month == 1:
-                    query_start = now.replace(year=now.year-1, month=12, day=1, hour=0, minute=0, second=0, microsecond=0)
+                    query_start = now.replace(
+                        year=now.year - 1,
+                        month=12,
+                        day=1,
+                        hour=0,
+                        minute=0,
+                        second=0,
+                        microsecond=0,
+                    )
                 else:
-                    query_start = now.replace(month=now.month-1, day=1, hour=0, minute=0, second=0, microsecond=0)
-                
+                    query_start = now.replace(
+                        month=now.month - 1,
+                        day=1,
+                        hour=0,
+                        minute=0,
+                        second=0,
+                        microsecond=0,
+                    )
+
                 query_end = first_this_month
                 display_range = "Last Month"
             else:
                 # Fallback to current month if unknown range
-                query_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                query_start = now.replace(
+                    day=1,
+                    hour=0,
+                    minute=0,
+                    second=0,
+                    microsecond=0,
+                )
                 display_range = time_range
 
         # 3. Build Queries
         def build_query(tx_type: TransactionType):
             q = self.db.query(func.sum(Transaction.amount)).filter(
                 Transaction.user_id == self.user_id,
-                Transaction.type == tx_type
+                Transaction.type == tx_type,
             )
             if query_start:
                 q = q.filter(Transaction.occurred_at >= query_start)
@@ -151,7 +267,7 @@ class TransactionController:
         income = build_query(TransactionType.INCOME)
         expense = build_query(TransactionType.EXPENSE)
         balance = income - expense
-        
+
         # We need to get the currency symbol/code. Assuming user has one if they have transactions.
         user = self.db.query(User).filter(User.id == self.user_id).first()
         currency_code = user.currency.code if user and user.currency else ""
