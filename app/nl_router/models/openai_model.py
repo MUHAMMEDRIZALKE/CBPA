@@ -1,6 +1,6 @@
-
 import json
 import logging
+from pathlib import Path
 from typing import Any
 from openai import AsyncOpenAI
 from app.core.config import settings
@@ -10,6 +10,18 @@ from app.nl_router.models.base import BaseModel
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant."
+
+
+def _load_system_prompt() -> str:
+    prompt_path = Path(__file__).resolve().parent.parent / "prompts" / "system.md"
+    try:
+        return prompt_path.read_text().strip()
+    except OSError as e:
+        logger.warning("Could not load system prompt from %s: %s. Using default.", prompt_path, e)
+        return DEFAULT_SYSTEM_PROMPT
+
+
 class OpenAIModel(BaseModel):
     def __init__(self):
         self.client = AsyncOpenAI(
@@ -17,6 +29,7 @@ class OpenAIModel(BaseModel):
             api_key=settings.OPEN_AI_API_KEY,
         )
         self.model_name = settings.OPEN_AI_MODEL_NAME
+        self._system_prompt = _load_system_prompt()
 
     async def parse_user_message(self, message: str, user_id: str) -> Any:
         """
@@ -24,7 +37,7 @@ class OpenAIModel(BaseModel):
         Handles tool calls if the model requests them.
         """
         messages = [
-            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "system", "content": self._system_prompt},
             {"role": "user", "content": message}
         ]
 
