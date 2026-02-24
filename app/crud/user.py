@@ -25,7 +25,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         Returns:
             User: Created user.
         """
-        obj_data = obj_in.dict()
+        obj_data = self._dump_model(obj_in)
         if "password" in obj_data:
             del obj_data["password"]
 

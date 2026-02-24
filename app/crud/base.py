@@ -13,6 +13,13 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     def __init__(self, model: Type[ModelType]):
         self.model = model
 
+    @staticmethod
+    def _dump_model(obj: BaseModel, *, exclude_unset: bool = False) -> Dict[str, Any]:
+        # Pydantic v2 uses model_dump(); v1 uses dict().
+        if hasattr(obj, "model_dump"):
+            return obj.model_dump(exclude_unset=exclude_unset)  # type: ignore[attr-defined]
+        return obj.dict(exclude_unset=exclude_unset)  # type: ignore[call-arg]
+
     def get(self, db: Session, id: Any) -> Optional[ModelType]:
         """Get a single record by ID."""
         return db.query(self.model).get(id)
@@ -23,7 +30,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     def create(self, db: Session, obj_in: CreateSchemaType) -> ModelType:
         """Create a new record."""
-        obj_data = obj_in.dict()
+        obj_data = self._dump_model(obj_in)
         db_obj = self.model(**obj_data)
         db.add(db_obj)
         db.commit()
@@ -37,7 +44,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         obj_in: UpdateSchemaType | Dict[str, Any],
     ) -> ModelType:
         """Update an existing record."""
-        data = obj_in if isinstance(obj_in, dict) else obj_in.dict(exclude_unset=True)
+        data = obj_in if isinstance(obj_in, dict) else self._dump_model(obj_in, exclude_unset=True)
         for field, value in data.items():
             setattr(db_obj, field, value)
         db.add(db_obj)
