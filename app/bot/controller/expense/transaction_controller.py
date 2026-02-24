@@ -3,7 +3,7 @@ from enum import StrEnum
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import func
+from sqlalchemy import func, cast, String
 from app.db.session import SessionLocal
 from app.models.expense_tracker import Transaction
 from app.models.user import User
@@ -108,7 +108,10 @@ class TransactionController:
 
         transactions = (
             self.db.query(Transaction)
-            .filter(Transaction.user_id == self.user_id)
+            .filter(
+                Transaction.user_id == self.user_id,
+                Transaction.is_deleted.is_(False),
+            )
             .order_by(Transaction.occurred_at.desc())
             .limit(limit_value)
             .all()
@@ -130,24 +133,38 @@ class TransactionController:
 
     def delete_transaction(self, transaction_id: str) -> str:
         if not transaction_id:
-            return "Please provide a transaction ID to delete."
+            return "Please provide a transaction ID or prefix to delete."
 
-        try:
-            tx_uuid = UUID(transaction_id)
-        except ValueError:
-            return "The transaction ID you provided is not a valid UUID."
+        prefix = transaction_id.strip()
+        if not prefix:
+            return "Please provide a transaction ID or prefix to delete."
 
-        transaction = (
+        # Allow matching by UUID prefix as shown in the list output.
+        matches = (
             self.db.query(Transaction)
             .filter(
-                Transaction.id == tx_uuid,
                 Transaction.user_id == self.user_id,
+                Transaction.is_deleted.is_(False),
+                cast(Transaction.id, String).like(f"{prefix}%"),
             )
-            .first()
+            .all()
         )
 
-        if not transaction:
+        if not matches:
             return "Transaction not found for your account."
+
+        if len(matches) > 1:
+            # Show a few matching candidates to help the user refine.
+            lines = ["Multiple transactions match that ID prefix. Please enter more characters from the transaction ID to narrow it down."]
+            for tx in matches[:5]:
+                currency_code = tx.currency.code if tx.currency else ""
+                date_str = tx.occurred_at.strftime("%Y-%m-%d")
+                lines.append(
+                    f"- {tx.id} | {date_str} | {tx.amount} {currency_code} | {tx.description}"
+                )
+            return "\n".join(lines)
+
+        transaction = matches[0]
 
         currency_code = transaction.currency.code if transaction.currency else ""
         date_str = transaction.occurred_at.strftime("%Y-%m-%d")
@@ -155,7 +172,8 @@ class TransactionController:
             f"{transaction.amount} {currency_code} on {date_str} - {transaction.description}"
         )
 
-        self.db.delete(transaction)
+        transaction.is_deleted = True
+        self.db.add(transaction)
         self.db.commit()
 
         return f"Deleted transaction {transaction.id}: {summary}."
@@ -257,6 +275,7 @@ class TransactionController:
             q = self.db.query(func.sum(Transaction.amount)).filter(
                 Transaction.user_id == self.user_id,
                 Transaction.type == tx_type,
+                Transaction.is_deleted.is_(False),
             )
             if query_start:
                 q = q.filter(Transaction.occurred_at >= query_start)

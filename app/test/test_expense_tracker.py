@@ -1,8 +1,6 @@
 import pytest
-from uuid import uuid4
+from uuid import uuid4, UUID
 from datetime import datetime
-
-import pytest
 
 from app.db.session import SessionLocal
 from app.models.user import User
@@ -286,12 +284,12 @@ def test_delete_transaction_success_and_not_found(db):
     )
     assert tx is not None
 
-    # Successful delete
+    # Successful delete with full UUID
     success_message = controller.delete_transaction(str(tx.id))
     assert "Deleted transaction" in success_message
     assert "To be deleted" in success_message
 
-    # Ensure it's gone
+    # Ensure it's soft-deleted
     remaining = (
         db.query(Transaction)
         .filter(
@@ -300,7 +298,8 @@ def test_delete_transaction_success_and_not_found(db):
         )
         .first()
     )
-    assert remaining is None
+    assert remaining is not None
+    assert remaining.is_deleted is True
 
     # Deleting again should yield not found
     not_found_message = controller.delete_transaction(str(tx.id))
@@ -317,4 +316,134 @@ def test_delete_transaction_invalid_uuid(db):
     controller = TransactionController(user.id)
 
     message = controller.delete_transaction("not-a-uuid")
-    assert "not a valid UUID" in message
+    assert "Transaction not found for your account" in message
+
+
+def test_delete_transaction_with_uuid_prefix(db):
+    unique_id = str(uuid4())[:8]
+    user = User(username=f"user_delete_prefix_{unique_id}")
+    db.add(user)
+    currency = _get_or_create_usd_currency(db)
+    user.currency_id = currency.id
+    db.commit()
+    db.refresh(user)
+
+    controller = TransactionController(user.id)
+
+    # Create one transaction for this user
+    controller.add_transaction(
+        25.0,
+        "Prefix delete",
+        TransactionType.EXPENSE,
+        "USD",
+        date="2022-07-01",
+    )
+
+    tx = (
+        db.query(Transaction)
+        .filter(Transaction.user_id == user.id)
+        .order_by(Transaction.occurred_at.desc())
+        .first()
+    )
+    assert tx is not None
+
+    prefix = str(tx.id)[:8]
+
+    success_message = controller.delete_transaction(prefix)
+    assert "Deleted transaction" in success_message
+    assert "Prefix delete" in success_message
+
+
+def test_delete_transaction_prefix_multiple_matches(db):
+    unique_id = str(uuid4())[:8]
+    user = User(username=f"user_delete_multi_{unique_id}")
+    db.add(user)
+    currency = _get_or_create_usd_currency(db)
+    user.currency_id = currency.id
+    db.commit()
+    db.refresh(user)
+
+    # Create two transactions with the same UUID prefix
+    shared_prefix = "12345678"
+    tx1 = Transaction(
+        id=UUID(f"{shared_prefix}-1111-1111-1111-111111111111"),
+        user_id=user.id,
+        currency_id=currency.id,
+        amount=10.0,
+        description="Multi 1",
+        category="test",
+        type=TransactionType.EXPENSE,
+        occurred_at=datetime.fromisoformat("2022-08-01"),
+    )
+    tx2 = Transaction(
+        id=UUID(f"{shared_prefix}-2222-2222-2222-222222222222"),
+        user_id=user.id,
+        currency_id=currency.id,
+        amount=20.0,
+        description="Multi 2",
+        category="test",
+        type=TransactionType.EXPENSE,
+        occurred_at=datetime.fromisoformat("2022-08-02"),
+    )
+    db.add(tx1)
+    db.add(tx2)
+    db.commit()
+
+    controller = TransactionController(user.id)
+
+    msg = controller.delete_transaction(shared_prefix)
+    assert "Multiple transactions match that ID prefix" in msg
+    assert "Multi 1" in msg
+    assert "Multi 2" in msg
+
+
+def test_soft_deleted_transactions_are_not_listed_or_counted(db):
+    unique_id = str(uuid4())[:8]
+    user = User(username=f"user_soft_{unique_id}")
+    db.add(user)
+    currency = _get_or_create_usd_currency(db)
+    user.currency_id = currency.id
+    db.commit()
+    db.refresh(user)
+
+    controller = TransactionController(user.id)
+
+    # Create two transactions
+    controller.add_transaction(
+        50.0,
+        "Visible",
+        TransactionType.EXPENSE,
+        "USD",
+        date="2022-06-01",
+    )
+    controller.add_transaction(
+        25.0,
+        "To be soft deleted",
+        TransactionType.EXPENSE,
+        "USD",
+        date="2022-06-02",
+    )
+
+    # Soft delete the second one
+    tx_to_delete = (
+        db.query(Transaction)
+        .filter(
+            Transaction.user_id == user.id,
+            Transaction.description == "To be soft deleted",
+        )
+        .first()
+    )
+    assert tx_to_delete is not None
+    controller.delete_transaction(str(tx_to_delete.id))
+
+    # List should only mention the visible one
+    list_result = controller.list_transactions(limit=10)
+    assert "Visible" in list_result
+    assert "To be soft deleted" not in list_result
+
+    # Analytics should only count the non-deleted transaction
+    analytics = controller.get_analytics(
+        start_date="2022-06-01",
+        end_date="2022-06-30",
+    )
+    assert "Expense: 50.0" in analytics
