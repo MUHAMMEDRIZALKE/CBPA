@@ -3,11 +3,10 @@ from enum import StrEnum
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import func, cast, String
 from app.db.session import SessionLocal
-from app.models.expense_tracker import Transaction
 from app.models.user import User
 from app.models.currency import Currency
+from app.crud.transaction import transaction_crud
 
 
 class TransactionType(StrEnum):
@@ -79,7 +78,8 @@ class TransactionController:
                 # Fallback to now
                 pass
 
-        transaction = Transaction(
+        transaction_crud.create_for_user(
+            db=self.db,
             user_id=self.user_id,
             currency_id=target_currency.id,
             amount=amount,
@@ -88,8 +88,6 @@ class TransactionController:
             type=transaction_type,
             occurred_at=occurred_at,
         )
-        self.db.add(transaction)
-        self.db.commit()
 
         return f"Recorded {transaction_type}: {amount} {target_currency.code} for {description}."
 
@@ -106,15 +104,10 @@ class TransactionController:
         if limit_value > 50:
             limit_value = 50
 
-        transactions = (
-            self.db.query(Transaction)
-            .filter(
-                Transaction.user_id == self.user_id,
-                Transaction.is_deleted.is_(False),
-            )
-            .order_by(Transaction.occurred_at.desc())
-            .limit(limit_value)
-            .all()
+        transactions = transaction_crud.list_recent_for_user(
+            db=self.db,
+            user_id=self.user_id,
+            limit=limit_value,
         )
 
         if not transactions:
@@ -140,14 +133,10 @@ class TransactionController:
             return "Please provide a transaction ID or prefix to delete."
 
         # Allow matching by UUID prefix as shown in the list output.
-        matches = (
-            self.db.query(Transaction)
-            .filter(
-                Transaction.user_id == self.user_id,
-                Transaction.is_deleted.is_(False),
-                cast(Transaction.id, String).like(f"{prefix}%"),
-            )
-            .all()
+        matches = transaction_crud.find_active_by_id_prefix(
+            db=self.db,
+            user_id=self.user_id,
+            prefix=prefix,
         )
 
         if not matches:
@@ -172,9 +161,7 @@ class TransactionController:
             f"{transaction.amount} {currency_code} on {date_str} - {transaction.description}"
         )
 
-        transaction.is_deleted = True
-        self.db.add(transaction)
-        self.db.commit()
+        transaction_crud.soft_delete(self.db, tx=transaction)
 
         return f"Deleted transaction {transaction.id}: {summary}."
 
@@ -270,21 +257,21 @@ class TransactionController:
                 )
                 display_range = time_range
 
-        # 3. Build Queries
-        def build_query(tx_type: TransactionType):
-            q = self.db.query(func.sum(Transaction.amount)).filter(
-                Transaction.user_id == self.user_id,
-                Transaction.type == tx_type,
-                Transaction.is_deleted.is_(False),
-            )
-            if query_start:
-                q = q.filter(Transaction.occurred_at >= query_start)
-            if query_end:
-                q = q.filter(Transaction.occurred_at < query_end)
-            return q.scalar() or 0.0
-
-        income = build_query(TransactionType.INCOME)
-        expense = build_query(TransactionType.EXPENSE)
+        # 3. Aggregate values via CRUD layer
+        income = transaction_crud.sum_amount_for_user_and_type(
+            db=self.db,
+            user_id=self.user_id,
+            tx_type=TransactionType.INCOME,
+            start=query_start,
+            end=query_end,
+        )
+        expense = transaction_crud.sum_amount_for_user_and_type(
+            db=self.db,
+            user_id=self.user_id,
+            tx_type=TransactionType.EXPENSE,
+            start=query_start,
+            end=query_end,
+        )
         balance = income - expense
 
         # We need to get the currency symbol/code. Assuming user has one if they have transactions.
